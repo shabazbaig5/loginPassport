@@ -4,20 +4,22 @@ const router = express.Router();
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 const passport = require('passport');
-
+const session = require('express-session');
 // const morgan = require('morgan');
-
+// const users = require('../db');
+// console.log(users);
 // router.use(morgan('tiny'));
+// console.log(users.rows[0]);
+// const currentUser = require('../db').currentUser;
 
-
-
+// console.log(currentUser);
 
 module.exports = () => {
 
     router.get('/',(req,res) => {
-        console.log(req.user);
-        console.log(req.isAuthenticated());
-        console.log('logging');
+        // console.log(req.user);
+        // console.log(req.isAuthenticated());
+        // console.log('logging');
         res.render('home');
         
     });
@@ -27,18 +29,54 @@ module.exports = () => {
     });
 
     router.post('/login',passport.authenticate('local',{
-        successRedirect:'/profile',
+        successRedirect:`/profile`,
         failureRedirect:'/login'
     }));
+
+
+    // router.post('/login', async (req,res) => {
+
+    //     return new Promise((reject,resolve) => {
+    //         passport.authenticate('local',{
+    //             successRedirect:`/profile`,
+    //             failureRedirect:'/login'
+    //         })
+    //     });
+        
+    // })
+
+
+    // router.post('/login', (req,res) => {
+    //     console.log(req.body);
+    //     passport.authenticate('local',{
+    //         successRedirect:`/profile/${req.body.username}`,
+    //         failureRedirect:'/login'
+    //     });
+    //     // res.redirect(`/profile/${req.body.username}`);
+    // });
+
+    // console.log();
 
     router.get('/register',(req,res) => {
         res.render('register');
     });
+    // console.log(session);
+   
 
-    router.get('/profile',authenticationMiddleware(),(req,res) => {
-        res.render('profile');
+    router.get(`/profile`,authenticationMiddleware(),(req,res) => {
+        console.log(`in the profile api `);
+        console.log(req.session.passport.user);
+        console.log(req.params.id);
+        // let currentLoggedinUser = req.session.passport.user.username;
+        // console.log(passport);
+        res.render('profile', {userName : req.session.passport.user.username});
     });
 
+    router.post('/profile', (req,res) => {
+        req.logout();
+        req.session.destroy();
+        res.redirect('/');
+    })
 
     router.post('/register',(req,res) => {
         // console.log(req.body.userId);
@@ -85,7 +123,7 @@ module.exports = () => {
         return (req, res, next) => {
             console.log(`req.session.passport.user: ${JSON.stringify(req.session.passport)}`);
     
-            if (req.isAuthenticated()) return next();
+            if (req.isAuthenticated()) return req.session.passport.user,next();
             res.redirect('/login')
         }
     }

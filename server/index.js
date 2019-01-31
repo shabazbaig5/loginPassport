@@ -10,7 +10,8 @@ const cookieParser = require('cookie-parser');
 //authentication packages
 // const session = require('express-session');
 const passport = require('passport');
- var LocalStrategy = require('passport-local').Strategy;
+const LocalStrategy = require('passport-local').Strategy;
+const bcrypt = require('bcrypt');
 
 var MySQLStore = require('express-mysql-session')(session);
 
@@ -54,6 +55,12 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
+app.use((req,res,next) => {
+    res.locals.isAuthenticated = req.isAuthenticated();
+    // console.log(res.locals.userId = req.session.passport.user);
+    
+    next();
+});
 app.use('/',route());
 
 //passport local strategy
@@ -62,7 +69,34 @@ passport.use(new LocalStrategy(
     function(username, password, done) {
         console.log(username);
         console.log(password);
-        return done(null, 'successful');
+        const db = require('./db');
+        db.query('SELECT id,username, password  FROM testusers WHERE username = ?',[username], (err,rows,columns) => {
+            if(err){
+                done(null,err)
+            }
+            if(rows.length === 0){
+                done(null,false);
+            }else{
+                const hash = rows[0].password;
+                // console.log(hash);
+                // console.log(`the password in the local strategy is ${rows[0].password} and ${unHashedPassword}`);
+                bcrypt.compare(password,hash,(err, response) => {
+                    console.log(password);
+                    console.log(`the response is : ${response}`);
+                    if(response === true){
+                        return done(null, {username : rows[0].username});
+                    }
+                    else if(response === false){
+                        return done(null, false);
+                    }
+                    
+                });
+            }
+            // console.log(rows);
+            // return done(null,rows);
+           
+        });
+        
     }
   ));
 
